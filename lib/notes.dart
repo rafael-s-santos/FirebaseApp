@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:latlong2/latlong.dart' as ll;
+
 import 'notifications.dart';
+import 'maps.dart';
 
 class NotesPage extends StatefulWidget {
   const NotesPage({super.key});
-
   @override
   State<NotesPage> createState() => _NotesPageState();
 }
 
 class _NotesPageState extends State<NotesPage> {
   final createController = TextEditingController();
+
   String? editingId;
   final inlineController = TextEditingController();
   final inlineFocus = FocusNode();
+
   bool loading = false;
   String? message;
 
@@ -121,6 +125,40 @@ class _NotesPageState extends State<NotesPage> {
     }
   }
 
+  void _openMapViewer(
+    DocumentReference<Map<String, dynamic>> noteRef,
+    Map<String, dynamic> data,
+  ) {
+    GeoPoint? gp;
+    final pos = data['position'];
+    if (pos is GeoPoint) {
+      gp = pos;
+    } else if (pos is Map && pos['geopoint'] is GeoPoint) {
+      gp = pos['geopoint'] as GeoPoint;
+    }
+
+    final ll.LatLng? initialLatLng = gp == null
+        ? null
+        : ll.LatLng(gp.latitude, gp.longitude);
+    final double? initialZoom = (data['zoom'] as num?)?.toDouble();
+    final String? initialAddress =
+        (data['address'] as String?)?.trim().isEmpty == true
+        ? null
+        : data['address']?.toString();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapViewerEditorPage(
+          noteRef: noteRef,
+          initialLatLng: initialLatLng,
+          initialZoom: initialZoom,
+          initialAddress: initialAddress,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -187,6 +225,8 @@ class _NotesPageState extends State<NotesPage> {
                         final doc = docs[i];
                         final data = doc.data();
                         final isEditing = editingId == doc.id;
+                        final address = (data['address'] ?? '').toString();
+
                         if (isEditing) {
                           return Padding(
                             padding: const EdgeInsets.symmetric(
@@ -224,13 +264,32 @@ class _NotesPageState extends State<NotesPage> {
                             ),
                           );
                         }
+
                         return ListTile(
                           title: Text((data['description'] ?? '').toString()),
+                          subtitle: address.isEmpty
+                              ? null
+                              : Text(
+                                  address,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                           onTap: () => _startInlineEdit(doc),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Remover',
-                            onPressed: () => _remove(doc.id),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.map_rounded),
+                                tooltip: 'Mapa',
+                                onPressed: () =>
+                                    _openMapViewer(_col.doc(doc.id), data),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Remover',
+                                onPressed: () => _remove(doc.id),
+                              ),
+                            ],
                           ),
                         );
                       },
