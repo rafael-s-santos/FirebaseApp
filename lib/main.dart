@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'login.dart';
 import 'welcome.dart';
 import 'notes.dart';
@@ -25,6 +26,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Firebase App',
       theme: ThemeData(primarySwatch: Colors.indigo),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: const AuthGate(),
     );
   }
@@ -71,7 +74,7 @@ class HomePage extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.note),
-              title: const Text('Anotações'),
+              title: Text(AppLocalizations.of(context)!.notes),
               onTap: () async {
                 Navigator.push(
                   context,
